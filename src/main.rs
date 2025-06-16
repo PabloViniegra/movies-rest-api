@@ -2,6 +2,7 @@ mod db;
 mod models;
 mod route_handler;
 
+use actix_cors::Cors;
 use actix_web::{App, HttpServer, web};
 use db::establish_connection;
 use route_handler::*;
@@ -46,6 +47,13 @@ async fn main() -> std::io::Result<()> {
     let db = establish_connection().await;
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header()
+                    .max_age(3600),
+            )
             .app_data(web::Data::new(db.clone()))
             .route("/movies", web::get().to(list_movies))
             .route("/movies", web::post().to(add_movie))
@@ -56,7 +64,10 @@ async fn main() -> std::io::Result<()> {
             .route("/actors", web::post().to(add_actor))
             .route("/genres", web::get().to(list_genres))
             .route("/genres", web::post().to(add_genre))
-            .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", ApiDoc::openapi()))
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-doc/openapi.json", ApiDoc::openapi()),
+            )
     })
     .bind(("127.0.0.1", 8080))?
     .run()
